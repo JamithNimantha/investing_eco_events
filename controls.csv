@@ -1,0 +1,7 @@
+Variable Name,Value
+investing_download_today.py sleep time in seconds,30
+PostgreSQL Server,localhost
+PostgreSQL Database,iqfeed
+PostgreSQL Port,5432
+PostgreSQL Username,postgres
+PostgreSQL Password,Beth22Duke
