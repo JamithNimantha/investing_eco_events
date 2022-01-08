@@ -160,6 +160,7 @@ def start():
         # MAC OS
         s = Service(ChromeDriverManager().install())
         c = webdriver.Chrome(service=s)
+
         # visit the page
         c.get(MAIN_URL)
         time.sleep(20)
@@ -213,9 +214,8 @@ def start():
     finally:
         c.quit()
 
-
 # Enter the exact time
 schedule.every().day.at("21:23").do(start)
 
 if __name__ == '__main__':
-    schedule.run_pending()
+        schedule.run_pending()
