@@ -193,7 +193,6 @@ def start():
             writer.writerow(header)
             for tr in trs:
                 obj = get_row_data(tr)
-                cursor = database()
                 cursor.execute("SELECT * FROM eco_events WHERE event_date = %s AND  event_time = %s"
                                " AND event_name = %s",
                                (obj['date'], obj['time'], obj['event_text']))
@@ -214,8 +213,11 @@ def start():
     finally:
         c.quit()
 
+
 # Enter the exact time
 schedule.every().day.at("21:23").do(start)
 
 if __name__ == '__main__':
+    while True:
         schedule.run_pending()
+        time.sleep(1)
