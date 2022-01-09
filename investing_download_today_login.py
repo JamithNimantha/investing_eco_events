@@ -5,6 +5,7 @@ import time
 import schedule
 import bs4
 import psycopg2
+from psycopg2.extras import RealDictCursor
 from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
@@ -94,6 +95,37 @@ def save_record(cursor_obj, data_obj, result):
              forecast if forecast != '' else 0, previous if previous != '' else 0, actual_forecast, actual_previous,
              datetime.datetime.now(), datetime.datetime.now().time())
         )
+    cursor_obj.execute("SELECT * FROM eco_events WHERE event_date = %s AND  event_time = %s"
+                       " AND event_name = %s",
+                       (event_date, event_time, event_name))
+    data = cursor_obj.fetchone()
+    param = f'{data["event_name"]}%'
+    cursor_obj.execute(f"SELECT * FROM eco_events_impact where event_name like '{param}'")
+    impact = cursor_obj.fetchone()
+    if impact is not None:
+        head_line = ''
+        if impact['no_actual']:
+            head_line = head_line + f"[EVT:'{data['event_name']};TM:'+{data['event_time'].strftime('%H:%M')}';UPD:'" \
+                                    f"{data['update_time'].strftime('%H:%M')};"
+            if impact['actual_forecast'] is not None:
+                head_line = head_line + f"(AF:{'{:.2%}'.format(data['actual_forecast'])};"
+            if impact['actual_previous'] is not None:
+                head_line = head_line + f"(AP:{'{:.2%}'.format(data['actual_previous'])};"
+        else:
+            head_line = head_line + f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
+        cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, headline,"
+                           " symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7, symbol_8, symbol_9,"
+                           " symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15, entry_time) values "
+                           "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                           (data['event_date'], 'ECO_EVENT', None,
+                                                str(datetime.datetime.now()).split('.')[0],
+                                                head_line, impact['symbol_1'],
+                                                impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
+                                                impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
+                                                impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
+                                                impact['url'], impact['symbol_11'], impact['symbol_12'],
+                                                impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
+                                                datetime.datetime.now().time()))
 
 
 def closeBtn(c):
@@ -145,7 +177,7 @@ def database():
     conn = psycopg2.connect(database=db, user=user, password=pw, host=host, port=port)
     conn.autocommit = True
 
-    return conn.cursor()
+    return conn.cursor(cursor_factory=RealDictCursor)
 
 
 def start():
@@ -160,7 +192,6 @@ def start():
         # MAC OS
         s = Service(ChromeDriverManager().install())
         c = webdriver.Chrome(service=s)
-
         # visit the page
         c.get(MAIN_URL)
         time.sleep(20)
@@ -172,6 +203,7 @@ def start():
         time.sleep(10)
 
         # click on the 'this week'
+        # e = c.find_element(By.ID, 'timeFrame_today')
         e = c.find_element(By.ID, 'timeFrame_thisWeek')
         actions = ActionChains(c)
         actions.move_to_element(e).perform()
@@ -184,38 +216,27 @@ def start():
         soup = bs4.BeautifulSoup(c.page_source, 'html.parser')
         tbl = soup.find('table', id='economicCalendarData')
         trs = tbl.find_all('tr', class_='js-event-item')
-        header = ['date', 'time', 'Cur', 'Imp', 'Event', 'Actual', 'forecast', 'previous']
-        output_file = os.path.join(BASEDIR, 'investing_output.csv')
-        print(f'Writing output to {output_file}')
-        with open(output_file, 'w', newline='') as fp:
-            writer = csv.writer(fp)
-            cursor = database()
-            writer.writerow(header)
-            for tr in trs:
-                obj = get_row_data(tr)
-                cursor.execute("SELECT * FROM eco_events WHERE event_date = %s AND  event_time = %s"
-                               " AND event_name = %s",
-                               (obj['date'], obj['time'], obj['event_text']))
-                data = cursor.fetchone()
-                print(obj)
-                save_record(cursor, obj, data)
-                writer.writerow([obj['date'],
-                                 obj['time'],
-                                 obj['currency'],
-                                 obj['bulls'],
-                                 obj['event_text'],
-                                 obj['actual'],
-                                 obj['forecast'],
-                                 obj['previous']
-                                 ])
-            cursor.close()
+        cursor = database()
+        for tr in trs:
+            obj = get_row_data(tr)
+            cursor.execute("SELECT * FROM eco_events WHERE event_date = %s AND  event_time = %s"
+                           " AND event_name = %s",
+                           (obj['date'], obj['time'], obj['event_text']))
+            data = cursor.fetchone()
+            print(obj)
+            save_record(cursor, obj, data)
+
+        cursor.close()
         print('DONE!')
     finally:
         c.quit()
 
 
+# Read Control.csv
+csv_data = dict(csv.reader(open(f'Control{os.sep}controls.csv')))
+wait_time = int(csv_data["investing_download_today.py sleep time in seconds"])
 # Enter the exact time
-schedule.every().day.at("21:23").do(start)
+schedule.every(wait_time).seconds.do(start)
 
 if __name__ == '__main__':
     while True:
