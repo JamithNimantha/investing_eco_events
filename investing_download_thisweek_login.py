@@ -2,7 +2,7 @@ import csv
 import datetime
 import os
 import time
-import schedule
+
 import bs4
 import psycopg2
 from selenium import webdriver
@@ -35,15 +35,17 @@ def get_number_of_bull(td_data):
 
 def get_row_data(tr_soup):
     tds = tr_soup.find_all('td')
-    ann_time = tds[TIME_IDX].text.replace('\xa0', '').strip()
+    ann_time = '00:30' if tds[TIME_IDX].text.replace('\xa0', '').strip() =='Tentative' else tds[TIME_IDX].text.replace('\xa0', '').strip()
+    note = tds[TIME_IDX].text.replace('\xa0', '').strip() if tds[TIME_IDX].text.replace('\xa0', '').strip() =='Tentative' else None
     curr_name = tds[CURR_IDX].text.replace('\xa0', '').strip()
     bulls = get_number_of_bull(tds[IMPT_IDX])
     event_name = tds[EVENT_IDX].text.replace('\xa0', '').strip()
+
     actual = tds[ACTUAL_IDX].text.strip()
     forecast = tds[FORECAST_IDX].text.replace('\xa0', '').strip()
     previous = tds[PREVIOUS_IDX].text.replace('\xa0', '').strip()
     date_ = tr_soup.get('data-event-datetime', '').split()[0]
-    return {'date': date_, 'currency': curr_name, 'time': ann_time, 'bulls': bulls, 'event_text': event_name,
+    return {'date': date_, 'currency': curr_name, 'time': ann_time, 'note': note, 'bulls': bulls, 'event_text': event_name,
             'actual': actual, 'forecast': forecast, 'previous': previous}
 
 
@@ -67,6 +69,7 @@ def get_actual_forecast_previous_logic(actual, fore_prev):
 def save_record(cursor_obj, data_obj, result):
     event_date = data_obj['date']
     event_time = data_obj['time']
+    notes = data_obj['note']
     event_name = data_obj['event_text']
     importance = data_obj['bulls']
     actual = convert_value(data_obj['actual'].replace('%', '').replace(',', '').strip())
@@ -87,10 +90,10 @@ def save_record(cursor_obj, data_obj, result):
                             ))
     else:
         cursor_obj.execute(
-            'insert into eco_events(event_date, event_time, event_name, importance, actual, forecast, previuos,'
+            'insert into eco_events(event_date, event_time, notes, event_name, importance, actual, forecast, previuos,'
             ' actual_forecast, actual_previous, update_date, update_time)'
-            ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-            (event_date, event_time, event_name, importance, actual if actual != '' else 0,
+            ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+            (event_date, event_time, notes, event_name, importance, actual if actual != '' else 0,
              forecast if forecast != '' else 0, previous if previous != '' else 0, actual_forecast, actual_previous,
              datetime.datetime.now(), datetime.datetime.now().time())
         )
@@ -214,10 +217,5 @@ def start():
         c.quit()
 
 
-# Enter the exact time
-schedule.every().day.at("21:23").do(start)
-
 if __name__ == '__main__':
-    while True:
-        schedule.run_pending()
-        time.sleep(1)
+    start()
