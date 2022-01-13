@@ -6,6 +6,7 @@ import time
 import bs4
 import psycopg2
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -50,19 +51,22 @@ def get_row_data(tr_soup):
 
 
 def convert_value(value):
+
     if value.endswith('K'):
         return float(value.replace('K', '').strip()) * 1000
     elif value.endswith('M'):
         return float(value.replace('M', '').strip()) * 1000000
     elif value.endswith('B'):
         return float(value.replace('B', '').strip()) * 1000000000
+    elif value.endswith('%'):
+        return float(value.replace('%', '').strip()) / 100
     else:
         return value
 
 
 def get_actual_forecast_previous_logic(actual, fore_prev):
     if actual != 0 and fore_prev != 0:
-        return (actual / fore_prev) - 1
+        return (actual / abs(fore_prev)) - 1
     return None
 
 
@@ -156,13 +160,14 @@ def start():
         username = 'v_koul@hotmail.com'
         password = 'dekH56cHand'
         # start the browser
-
+        options = Options()
+        options.headless = True
         # Windows
-        # c = webdriver.Chrome('chromedriver.exe')
+        # c = webdriver.Chrome('chromedriver.exe', options=options)
 
         # MAC OS
         s = Service(ChromeDriverManager().install())
-        c = webdriver.Chrome(service=s)
+        c = webdriver.Chrome(service=s, options=options)
 
         # visit the page
         c.get(MAIN_URL)
