@@ -110,15 +110,8 @@ def save_record(cursor_obj, data_obj, result):
     impact = cursor_obj.fetchone()
     # event_name in eco_events_impact Table = True
     if impact is not None:
-        head_line = ''
-        if impact['no_actual'] is False:
-            head_line = head_line + f"[EVT:'{data['event_name']};TM:'+{data['event_time'].strftime('%H:%M')}';UPD:'" \
-                                    f"{data['update_time'].strftime('%H:%M')};"
-            if data['actual_forecast'] is not None:
-                head_line = head_line + f"(AF:{'{:.2%}'.format(data['actual_forecast'])};"
-            if data['actual_previous'] is not None:
-                head_line = head_line + f"(AP:{'{:.2%}'.format(data['actual_previous'])};"
-        if data['actual'] is not None and data['actual'] != 0:
+        if impact['no_actual'] is True:
+            head_line = f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
             cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
                                "headline, "
                                "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7, symbol_8, "
@@ -135,25 +128,42 @@ def save_record(cursor_obj, data_obj, result):
                                 impact['url'], impact['symbol_11'], impact['symbol_12'],
                                 impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
                                 datetime.datetime.now().time()))
-
         else:
-            head_line = head_line + f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
-            cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
-                               "headline, "
-                               "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7, symbol_8, "
-                               "symbol_9, "
-                               "symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15, entry_time) "
-                               "values "
-                               "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                               (data['event_date'], 'ECO_EVENT', None,
-                                                    str(datetime.datetime.now()).split('.')[0],
-                                                    head_line, impact['symbol_1'],
-                                                    impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
-                                                    impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
-                                                    impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
-                                                    impact['url'], impact['symbol_11'], impact['symbol_12'],
-                                                    impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
-                                                    datetime.datetime.now().time()))
+            if data['actual'] is not None and data['actual'] != 0:
+                head_line = f"[EVT:'{data['event_name']};TM:'+{data['event_time'].strftime('%H:%M')}';UPD:'" \
+                                        f"{data['update_time'].strftime('%H:%M')};"
+                if data['actual_forecast'] is not None:
+                    head_line = head_line + f"(AF:{'{:.2%}'.format(data['actual_forecast'])};"
+                if data['actual_previous'] is not None:
+                    head_line = head_line + f"(AP:{'{:.2%}'.format(data['actual_previous'])};"
+                cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
+                                   "headline, "
+                                   "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7, symbol_8, "
+                                   "symbol_9, "
+                                   "symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15, entry_time) "
+                                   "values "
+                                   "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
+                                   (data['event_date'], 'ECO_EVENT', None,
+                                    str(datetime.datetime.now()).split('.')[0],
+                                    head_line, impact['symbol_1'],
+                                    impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
+                                    impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
+                                    impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
+                                    impact['url'], impact['symbol_11'], impact['symbol_12'],
+                                    impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
+                                    datetime.datetime.now().time()))
+
+    # else:
+    #     if data['actual'] is not None and data['actual'] != 0:
+    #         head_line = f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
+    #         cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
+    #                            "headline, entry_time) "
+    #                            "values "
+    #                            "(%s, %s, %s, %s, %s, %s)",
+    #                            (data['event_date'], 'ECO_EVENT', None,
+    #                                                 str(datetime.datetime.now()).split('.')[0],
+    #                                                 head_line,
+    #                                                 datetime.datetime.now().time()))
 
 def closeBtn(c):
     try:

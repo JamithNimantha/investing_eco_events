@@ -162,11 +162,11 @@ def start():
         options = Options()
         options.headless = True
         # Windows
-        # c = webdriver.Chrome('chromedriver.exe', options=options)
+        c = webdriver.Chrome('chromedriver.exe', options=options)
 
         # MAC OS
-        s = Service(ChromeDriverManager().install())
-        c = webdriver.Chrome(service=s, options=options)
+        # s = Service(ChromeDriverManager().install())
+        # c = webdriver.Chrome(service=s, options=options)
 
         # visit the page
         c.get(MAIN_URL)
