@@ -58,13 +58,15 @@ def convert_value(value):
         return float(value.replace('M', '').strip()) * 1000000
     elif value.endswith('B'):
         return float(value.replace('B', '').strip()) * 1000000000
+    elif value.endswith('%'):
+        return float(value.replace('%', '').strip()) / 100
     else:
         return value
 
 
 def get_actual_forecast_previous_logic(actual, fore_prev):
     if actual != 0 and fore_prev != 0:
-        return (actual / fore_prev) - 1
+        return (actual - (fore_prev)) / abs(fore_prev)
     return None
 
 
@@ -74,9 +76,9 @@ def save_record(cursor_obj, data_obj, result):
     notes = data_obj['note']
     event_name = data_obj['event_text']
     importance = data_obj['bulls']
-    actual = convert_value(data_obj['actual'].replace('%', '').replace(',', '').strip())
-    forecast = convert_value(data_obj['forecast'].replace('%', '').replace(',', '').strip())
-    previous = convert_value(data_obj['previous'].replace('%', '').replace(',', '').strip())
+    actual = convert_value(data_obj['actual'].replace(',', '').strip())
+    forecast = convert_value(data_obj['forecast'].replace(',', '').strip())
+    previous = convert_value(data_obj['previous'].replace(',', '').strip())
     actual_forecast = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
                                                          float(forecast) if forecast != '' else 0)
     actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
@@ -214,11 +216,11 @@ def start():
         options = Options()
         options.headless = True
         # Windows
-        # c = webdriver.Chrome('chromedriver.exe', options=options)
+        c = webdriver.Chrome('chromedriver.exe', options=options)
 
         # MAC OS
-        s = Service(ChromeDriverManager().install())
-        c = webdriver.Chrome(service=s, options=options)
+        # s = Service(ChromeDriverManager().install())
+        # c = webdriver.Chrome(service=s, options=options)
         # visit the page
         c.get(MAIN_URL)
         time.sleep(20)
@@ -231,7 +233,6 @@ def start():
 
         # click on the 'today'
         e = c.find_element(By.ID, 'timeFrame_today')
-        # e = c.find_element(By.ID, 'timeFrame_thisWeek')
         actions = ActionChains(c)
         actions.move_to_element(e).perform()
         e.click()

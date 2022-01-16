@@ -51,7 +51,6 @@ def get_row_data(tr_soup):
 
 
 def convert_value(value):
-
     if value.endswith('K'):
         return float(value.replace('K', '').strip()) * 1000
     elif value.endswith('M'):
@@ -66,7 +65,7 @@ def convert_value(value):
 
 def get_actual_forecast_previous_logic(actual, fore_prev):
     if actual != 0 and fore_prev != 0:
-        return (actual / abs(fore_prev)) - 1
+        return (actual - (fore_prev)) / abs(fore_prev)
     return None
 
 
@@ -76,9 +75,9 @@ def save_record(cursor_obj, data_obj, result):
     notes = data_obj['note']
     event_name = data_obj['event_text']
     importance = data_obj['bulls']
-    actual = convert_value(data_obj['actual'].replace('%', '').replace(',', '').strip())
-    forecast = convert_value(data_obj['forecast'].replace('%', '').replace(',', '').strip())
-    previous = convert_value(data_obj['previous'].replace('%', '').replace(',', '').strip())
+    actual = convert_value(data_obj['actual'].replace(',', '').strip())
+    forecast = convert_value(data_obj['forecast'].replace(',', '').strip())
+    previous = convert_value(data_obj['previous'].replace(',', '').strip())
     actual_forecast = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
                                                          float(forecast) if forecast != '' else 0)
     actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
