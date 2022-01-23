@@ -64,7 +64,7 @@ def convert_value(value):
 
 
 def get_actual_forecast_previous_logic(actual, fore_prev):
-    if actual != 0 and fore_prev != 0:
+    if actual is not None and fore_prev is not None:
         return (actual - (fore_prev)) / abs(fore_prev)
     return None
 
@@ -78,27 +78,27 @@ def save_record(cursor_obj, data_obj, result):
     actual = convert_value(data_obj['actual'].replace(',', '').strip())
     forecast = convert_value(data_obj['forecast'].replace(',', '').strip())
     previous = convert_value(data_obj['previous'].replace(',', '').strip())
-    actual_forecast = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
-                                                         float(forecast) if forecast != '' else 0)
-    actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
-                                                         float(previous) if previous != '' else 0)
+    actual_forecast = get_actual_forecast_previous_logic(float(actual) if actual != '' else None,
+                                                         float(forecast) if forecast != '' else None)
+    actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else None,
+                                                         float(previous) if previous != '' else None)
     if result is not None:
         print(f"Event Record: {data_obj['event_text']} Already Exists!")
         cursor_obj.execute('update eco_events set importance = %s, actual = %s, forecast = %s, previuos = %s,'
                            ' actual_forecast = %s, actual_previous = %s, update_time = %s, update_date = %s '
                            'where event_date = %s and event_time = %s and  event_name = %s',
-                           (importance, actual if actual != '' else 0, forecast if forecast != '' else 0,
-                            previous if previous != '' else 0, actual_forecast, actual_previous,
+                           (importance, actual if actual != '' else None, forecast if forecast != '' else None,
+                            previous if previous != '' else None, actual_forecast, actual_previous,
                             datetime.datetime.now().time(), datetime.datetime.now(), event_date, event_time, event_name
                             ))
     else:
         cursor_obj.execute(
             'insert into eco_events(event_date, event_time, notes, event_name, importance, actual, forecast, previuos,'
-            ' actual_forecast, actual_previous, update_date, update_time)'
-            ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-            (event_date, event_time, notes, event_name, importance, actual if actual != '' else 0,
-             forecast if forecast != '' else 0, previous if previous != '' else 0, actual_forecast, actual_previous,
-             datetime.datetime.now(), datetime.datetime.now().time())
+            ' actual_forecast, actual_previous, update_date, update_time, update_news)'
+            ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+            (event_date, event_time, notes, event_name, importance, actual if actual != '' else None,
+             forecast if forecast != '' else None, previous if previous != '' else None, actual_forecast, actual_previous,
+             datetime.datetime.now(), datetime.datetime.now().time(), False)
         )
 
 

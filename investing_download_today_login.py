@@ -38,8 +38,10 @@ def get_number_of_bull(td_data):
 
 def get_row_data(tr_soup):
     tds = tr_soup.find_all('td')
-    ann_time = '00:30' if tds[TIME_IDX].text.replace('\xa0', '').strip() =='Tentative' else tds[TIME_IDX].text.replace('\xa0', '').strip()
-    note = tds[TIME_IDX].text.replace('\xa0', '').strip() if tds[TIME_IDX].text.replace('\xa0', '').strip() =='Tentative' else None
+    ann_time = '00:30' if tds[TIME_IDX].text.replace('\xa0', '').strip() == 'Tentative' else tds[TIME_IDX].text.replace(
+        '\xa0', '').strip()
+    note = tds[TIME_IDX].text.replace('\xa0', '').strip() if tds[TIME_IDX].text.replace('\xa0',
+                                                                                        '').strip() == 'Tentative' else None
     curr_name = tds[CURR_IDX].text.replace('\xa0', '').strip()
     bulls = get_number_of_bull(tds[IMPT_IDX])
     event_name = tds[EVENT_IDX].text.replace('\xa0', '').strip()
@@ -47,7 +49,8 @@ def get_row_data(tr_soup):
     forecast = tds[FORECAST_IDX].text.replace('\xa0', '').strip()
     previous = tds[PREVIOUS_IDX].text.replace('\xa0', '').strip()
     date_ = tr_soup.get('data-event-datetime', '').split()[0]
-    return {'date': date_, 'currency': curr_name, 'time': ann_time, 'note': note, 'bulls': bulls, 'event_text': event_name,
+    return {'date': date_, 'currency': curr_name, 'time': ann_time, 'note': note, 'bulls': bulls,
+            'event_text': event_name,
             'actual': actual, 'forecast': forecast, 'previous': previous}
 
 
@@ -65,12 +68,12 @@ def convert_value(value):
 
 
 def get_actual_forecast_previous_logic(actual, fore_prev):
-    if actual != 0 and fore_prev != 0:
+    if actual != None and fore_prev is not None:
         return (actual - (fore_prev)) / abs(fore_prev)
     return None
 
 
-def save_record(cursor_obj, data_obj, result):
+def save_record(cursor_obj, data_obj, current_time):
     event_date = data_obj['date']
     event_time = data_obj['time']
     notes = data_obj['note']
@@ -79,91 +82,95 @@ def save_record(cursor_obj, data_obj, result):
     actual = convert_value(data_obj['actual'].replace(',', '').strip())
     forecast = convert_value(data_obj['forecast'].replace(',', '').strip())
     previous = convert_value(data_obj['previous'].replace(',', '').strip())
-    actual_forecast = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
-                                                         float(forecast) if forecast != '' else 0)
-    actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else 0,
-                                                         float(previous) if previous != '' else 0)
-    if result is not None:
-        print(f"Event Record: {data_obj['event_text']} Already Exists!")
-        cursor_obj.execute('update eco_events set importance = %s, actual = %s, forecast = %s, previuos = %s,'
-                           ' actual_forecast = %s, actual_previous = %s, update_time = %s, update_date = %s '
-                           'where event_date = %s and event_time = %s and  event_name = %s',
-                           (importance, actual if actual != '' else 0, forecast if forecast != '' else 0,
-                            previous if previous != '' else 0, actual_forecast, actual_previous,
-                            datetime.datetime.now().time(), datetime.datetime.now(), event_date, event_time, event_name
-                            ))
-    else:
-        cursor_obj.execute(
-            'insert into eco_events(event_date, event_time, notes, event_name, importance, actual, forecast, previuos,'
-            ' actual_forecast, actual_previous, update_date, update_time)'
-            ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-            (event_date, event_time, notes, event_name, importance, actual if actual != '' else 0,
-             forecast if forecast != '' else 0, previous if previous != '' else 0, actual_forecast, actual_previous,
-             datetime.datetime.now(), datetime.datetime.now().time())
-        )
-    cursor_obj.execute("SELECT * FROM eco_events WHERE event_date = %s AND  event_time = %s"
-                       " AND event_name = %s",
-                       (event_date, event_time, event_name))
-    data = cursor_obj.fetchone()
-    param = f'{data["event_name"]}%'
-    cursor_obj.execute(f"SELECT * FROM eco_events_impact where event_name like '{param}'")
+    actual_forecast = get_actual_forecast_previous_logic(float(actual) if actual != '' else None,
+                                                         float(forecast) if forecast != '' else None)
+    actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else None,
+                                                         float(previous) if previous != '' else None)
+    param = f'{event_name}%'
+    cursor_obj.execute(f"SELECT * FROM eco_events_impact where event_name ilike '{param}'")
     impact = cursor_obj.fetchone()
-    # event_name in eco_events_impact Table = True
+
     if impact is not None:
         if impact['no_actual'] is True:
-            head_line = f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
-            cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
-                               "headline, "
-                               "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7, symbol_8, "
-                               "symbol_9, "
-                               "symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15, entry_time) "
-                               "values "
-                               "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                               (data['event_date'], 'ECO_EVENT', None,
-                                str(datetime.datetime.now()).split('.')[0],
-                                head_line, impact['symbol_1'],
-                                impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
-                                impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
-                                impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
-                                impact['url'], impact['symbol_11'], impact['symbol_12'],
-                                impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
-                                datetime.datetime.now().time()))
-        else:
-            if data['actual'] is not None and data['actual'] != 0:
-                head_line = f"[EVT:'{data['event_name']};TM:'+{data['event_time'].strftime('%H:%M')}';UPD:'" \
-                                        f"{data['update_time'].strftime('%H:%M')};"
-                if data['actual_forecast'] is not None:
-                    head_line = head_line + f"(AF:{'{:.2%}'.format(data['actual_forecast'])};"
-                if data['actual_previous'] is not None:
-                    head_line = head_line + f"(AP:{'{:.2%}'.format(data['actual_previous'])};"
-                cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
-                                   "headline, "
-                                   "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7, symbol_8, "
-                                   "symbol_9, "
-                                   "symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15, entry_time) "
-                                   "values "
-                                   "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)",
-                                   (data['event_date'], 'ECO_EVENT', None,
-                                    str(datetime.datetime.now()).split('.')[0],
-                                    head_line, impact['symbol_1'],
-                                    impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
-                                    impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
-                                    impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
-                                    impact['url'], impact['symbol_11'], impact['symbol_12'],
-                                    impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
-                                    datetime.datetime.now().time()))
+            if actual != '':
+                cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = false",
+                                   (event_name))
+                data = cursor_obj.fetchone()
+                if data is None:
+                    cursor_obj.execute(
+                        'insert into eco_events(event_date, event_time, notes, event_name, importance, actual, forecast, previuos,'
+                        ' actual_forecast, actual_previous, update_date, update_time, update_news)'
+                        ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+                        (event_date, event_time, notes, event_name, importance, actual if actual != '' else None,
+                         forecast if forecast != '' else None, previous if previous != '' else None, actual_forecast,
+                         actual_previous,
+                         datetime.datetime.now(), datetime.datetime.now().time(), False)
+                    )
+                elif data is not None and data['actual'] is None:
+                    update_time = datetime.datetime.now()
+                    head_line = f"[EVT:'{data['event_name']};TM:'+{event_time.strftime('%H:%M')}';UPD:'" \
+                                f"{update_time.time().strftime('%H:%M')};"
+                    if data['actual_forecast'] is not None:
+                        head_line = head_line + f"(AF:{'{:.2%}'.format(data['actual_forecast'])};"
+                    if data['actual_previous'] is not None:
+                        head_line = head_line + f"(AP:{'{:.2%}'.format(data['actual_previous'])};"
+                    cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
+                                       "headline, "
+                                       "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7,"
+                                       " symbol_8, "
+                                       "symbol_9, "
+                                       "symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15,"
+                                       " entry_time) "
+                                       "values "
+                                       "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s,"
+                                       " %s, %s, %s, %s, %s)",
+                                       (event_date, 'ECO_EVENT', None,
+                                        str(update_time).split('.')[0],
+                                        head_line, impact['symbol_1'],
+                                        impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
+                                        impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
+                                        impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
+                                        impact['url'], impact['symbol_11'], impact['symbol_12'],
+                                        impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
+                                        update_time.time()))
+                    cursor_obj.execute(
+                        'update eco_events set importance = %s, actual = %s, forecast = %s, previuos = %s,'
+                        ' actual_forecast = %s, actual_previous = %s, update_time = %s, update_date = %s,'
+                        ' update_news = %s where event_name = %s',
+                        (importance, actual if actual != '' else None, forecast if forecast != '' else None,
+                         previous if previous != '' else None, actual_forecast, actual_previous,
+                         update_time.time(), update_time, True, data['event_name']))
 
-    # else:
-    #     if data['actual'] is not None and data['actual'] != 0:
-    #         head_line = f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
-    #         cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
-    #                            "headline, entry_time) "
-    #                            "values "
-    #                            "(%s, %s, %s, %s, %s, %s)",
-    #                            (data['event_date'], 'ECO_EVENT', None,
-    #                                                 str(datetime.datetime.now()).split('.')[0],
-    #                                                 head_line,
-    #                                                 datetime.datetime.now().time()))
+        else:
+            if datetime.datetime.strptime(current_time, '%H:%M') >= datetime.datetime.strptime(event_time, '%H:%M'):
+                cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = false",
+                                   (event_name))
+                data = cursor_obj.fetchone()
+                if data is not None:
+                    update_time = datetime.datetime.now()
+                    head_line = f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
+                    cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp,"
+                                       "headline, "
+                                       "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7,"
+                                       " symbol_8, "
+                                       "symbol_9, "
+                                       "symbol_10, url, symbol_11, symbol_12, symbol_13, symbol_14, symbol_15,"
+                                       " entry_time) "
+                                       "values "
+                                       "(%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,%s, %s, %s, %s, %s,"
+                                       " %s, %s, %s, %s, %s)",
+                                       (event_date, 'ECO_EVENT', None,
+                                        str(update_time).split('.')[0],
+                                        head_line, impact['symbol_1'],
+                                        impact['symbol_2'], impact['symbol_3'], impact['symbol_4'],
+                                        impact['symbol_5'], impact['symbol_6'], impact['symbol_7'],
+                                        impact['symbol_8'], impact['symbol_9'], impact['symbol_10'],
+                                        impact['url'], impact['symbol_11'], impact['symbol_12'],
+                                        impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
+                                        update_time.time()))
+                    cursor_obj.execute(
+                        'update eco_events set update_news = %s where event_name = %s',
+                        (True, data['event_name']))
 
 def closeBtn(c):
     try:
@@ -250,6 +257,8 @@ def start():
         # wait for it to process, here's a static wait time
         time.sleep(10)
 
+        current_time = c.find_element(By.ID, 'currentTime').text.replace('\xa0', '').strip()
+
         # process the data
         soup = bs4.BeautifulSoup(c.page_source, 'html.parser')
         tbl = soup.find('table', id='economicCalendarData')
@@ -257,12 +266,7 @@ def start():
         cursor = database()
         for tr in trs:
             obj = get_row_data(tr)
-            cursor.execute("SELECT * FROM eco_events WHERE event_date = %s AND  event_time = %s"
-                           " AND event_name = %s",
-                           (obj['date'], obj['time'], obj['event_text']))
-            data = cursor.fetchone()
-            print(obj)
-            save_record(cursor, obj, data)
+            save_record(cursor, obj, current_time)
 
         cursor.close()
         print('DONE!')
