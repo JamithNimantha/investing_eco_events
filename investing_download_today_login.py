@@ -87,6 +87,29 @@ def save_record(cursor_obj, data_obj, current_time):
     actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else None,
                                                          float(previous) if previous != '' else None)
     param = f'{event_name}%'
+
+    cursor_obj.execute(f"SELECT * FROM eco_events where event_name ilike '{param}'")
+    event_record = cursor_obj.fetchone()
+
+    if event_record is not None:
+        cursor_obj.execute('update eco_events set importance = %s, actual = %s, forecast = %s, previuos = %s,'
+                           ' actual_forecast = %s, actual_previous = %s, update_time = %s, update_date = %s '
+                           'where event_name = %s',
+                           (importance, actual if actual != '' else None, forecast if forecast != '' else None,
+                            previous if previous != '' else None, actual_forecast, actual_previous,
+                            datetime.datetime.now().time(), datetime.datetime.now(), event_name
+                            ))
+    else:
+        cursor_obj.execute(
+            'insert into eco_events(event_date, event_time, notes, event_name, importance, actual, forecast, previuos,'
+            ' actual_forecast, actual_previous, update_date, update_time, update_news)'
+            ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
+            (event_date, event_time, notes, event_name, importance, actual if actual != '' else None,
+             forecast if forecast != '' else None, previous if previous != '' else None, actual_forecast,
+             actual_previous,
+             datetime.datetime.now(), datetime.datetime.now().time(), False)
+        )
+
     cursor_obj.execute(f"SELECT * FROM eco_events_impact where event_name ilike '{param}'")
     impact = cursor_obj.fetchone()
 
