@@ -93,8 +93,8 @@ def save_record(cursor_obj, data_obj, current_time):
     if impact is not None:
         if impact['no_actual'] is True:
             if actual != '':
-                cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = false",
-                                   (event_name))
+                cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = %s",
+                                   (event_name, False))
                 data = cursor_obj.fetchone()
                 if data is None:
                     cursor_obj.execute(
@@ -143,8 +143,8 @@ def save_record(cursor_obj, data_obj, current_time):
 
         else:
             if datetime.datetime.strptime(current_time, '%H:%M') >= datetime.datetime.strptime(event_time, '%H:%M'):
-                cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = false",
-                                   (event_name))
+                cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = %s",
+                                   (event_name, False))
                 data = cursor_obj.fetchone()
                 if data is not None:
                     update_time = datetime.datetime.now()
@@ -233,11 +233,11 @@ def start():
         options = Options()
         options.headless = True
         # Windows
-        c = webdriver.Chrome('chromedriver.exe', options=options)
+        # c = webdriver.Chrome('chromedriver.exe', options=options)
 
         # MAC OS
-        # s = Service(ChromeDriverManager().install())
-        # c = webdriver.Chrome(service=s, options=options)
+        s = Service(ChromeDriverManager().install())
+        c = webdriver.Chrome(service=s, options=options)
         # visit the page
         c.get(MAIN_URL)
         time.sleep(20)
