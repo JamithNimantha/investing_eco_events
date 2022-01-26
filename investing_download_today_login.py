@@ -1,6 +1,7 @@
 import csv
 import datetime
 import os
+import platform
 import time
 
 import bs4
@@ -255,12 +256,15 @@ def start():
 
         options = Options()
         options.headless = True
-        # Windows
-        # c = webdriver.Chrome('chromedriver.exe', options=options)
 
-        # MAC OS
-        s = Service(ChromeDriverManager().install())
-        c = webdriver.Chrome(service=s, options=options)
+        if platform.system().startswith('Darwin'):
+            # MAC OS
+            s = Service(ChromeDriverManager().install())
+            c = webdriver.Chrome(service=s, options=options)
+        else:
+            # Windows
+            c = webdriver.Chrome('chromedriver.exe', options=options)
+
         # visit the page
         c.get(MAIN_URL)
         time.sleep(20)
