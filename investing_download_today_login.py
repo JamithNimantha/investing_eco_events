@@ -1,5 +1,6 @@
 import csv
 import datetime
+import fnmatch
 import os
 import platform
 import time
@@ -87,9 +88,8 @@ def save_record(cursor_obj, data_obj, current_time):
                                                          float(forecast) if forecast != '' else None)
     actual_previous = get_actual_forecast_previous_logic(float(actual) if actual != '' else None,
                                                          float(previous) if previous != '' else None)
-    param = f'{event_name}%'
 
-    cursor_obj.execute(f"SELECT * FROM eco_events where event_name ilike '{param}'")
+    cursor_obj.execute(f"SELECT * FROM eco_events where event_name = '{event_name}'")
     event_record = cursor_obj.fetchone()
 
     if event_record is not None:
@@ -111,33 +111,28 @@ def save_record(cursor_obj, data_obj, current_time):
              datetime.datetime.now(), datetime.datetime.now().time(), False)
         )
 
-    cursor_obj.execute(f"SELECT * FROM eco_events_impact where event_name ilike '{param}'")
-    impact = cursor_obj.fetchone()
+    cursor_obj.execute(f"SELECT * FROM eco_events_impact")
+    impacts = cursor_obj.fetchall()
+    impact = None
+    for record in impacts:
+        if fnmatch.fnmatch(event_name, record['event_name'].replace('%', '*')):
+            impact = record
 
     if impact is not None:
-        if impact['no_actual'] is True:
+        if impact['no_actual'] is False:
             if actual != '':
                 cursor_obj.execute("SELECT * FROM eco_events WHERE event_name = %s AND update_news = %s",
                                    (event_name, False))
                 data = cursor_obj.fetchone()
-                if data is None:
-                    cursor_obj.execute(
-                        'insert into eco_events(event_date, event_time, notes, event_name, importance, actual, forecast, previuos,'
-                        ' actual_forecast, actual_previous, update_date, update_time, update_news)'
-                        ' values (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)',
-                        (event_date, event_time, notes, event_name, importance, actual if actual != '' else None,
-                         forecast if forecast != '' else None, previous if previous != '' else None, actual_forecast,
-                         actual_previous,
-                         datetime.datetime.now(), datetime.datetime.now().time(), False)
-                    )
-                elif data is not None and data['actual'] is None:
+                if data is not None and data['actual'] is not None:
+                    head_line = None
                     update_time = datetime.datetime.now()
-                    head_line = f"[EVT:'{data['event_name']};TM:'+{event_time.strftime('%H:%M')}';UPD:'" \
-                                f"{update_time.time().strftime('%H:%M')};"
-                    if data['actual_forecast'] is not None:
-                        head_line = head_line + f"(AF:{'{:.2%}'.format(data['actual_forecast'])};"
-                    if data['actual_previous'] is not None:
-                        head_line = head_line + f"(AP:{'{:.2%}'.format(data['actual_previous'])};"
+                    if data['actual_forecast'] is not None and data['actual_previous'] is not None:
+                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AF:{'{:,.2f}%'.format(data['actual_forecast'])}|AP:{'{:,.2f}%'.format(data['actual_previous'])}"
+                    elif data['actual_forecast'] is not None and data['actual_previous'] is None:
+                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AF:{'{:,.2f}%'.format(data['actual_forecast'])}"
+                    elif data['actual_forecast'] is None and data['actual_previous'] is not None:
+                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AP:{'{:,.2f}%'.format(data['actual_previous'])}"
                     cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
                                        "headline, "
                                        "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7,"
@@ -158,12 +153,8 @@ def save_record(cursor_obj, data_obj, current_time):
                                         impact['symbol_13'], impact['symbol_14'], impact['symbol_15'],
                                         update_time.time()))
                     cursor_obj.execute(
-                        'update eco_events set importance = %s, actual = %s, forecast = %s, previuos = %s,'
-                        ' actual_forecast = %s, actual_previous = %s, update_time = %s, update_date = %s,'
-                        ' update_news = %s where event_name = %s',
-                        (importance, actual if actual != '' else None, forecast if forecast != '' else None,
-                         previous if previous != '' else None, actual_forecast, actual_previous,
-                         update_time.time(), update_time, True, data['event_name']))
+                        'update eco_events set update_news = %s where event_name = %s',
+                        (True, data['event_name']))
 
         else:
             if datetime.datetime.strptime(current_time, '%H:%M') >= datetime.datetime.strptime(event_time, '%H:%M'):
@@ -172,7 +163,7 @@ def save_record(cursor_obj, data_obj, current_time):
                 data = cursor_obj.fetchone()
                 if data is not None:
                     update_time = datetime.datetime.now()
-                    head_line = f"EVT:{data['event_name']};TM:{data['event_time'].strftime('%H:%M')};"
+                    head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}"
                     cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp,"
                                        "headline, "
                                        "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7,"
