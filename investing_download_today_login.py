@@ -128,11 +128,11 @@ def save_record(cursor_obj, data_obj, current_time):
                     head_line = None
                     update_time = datetime.datetime.now()
                     if data['actual_forecast'] is not None and data['actual_previous'] is not None:
-                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AF:{'{:,.2f}%'.format(data['actual_forecast'])}|AP:{'{:,.2f}%'.format(data['actual_previous'])}"
+                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AF:{'{:,.2%}'.format(data['actual_forecast'])}|AP:{'{:,.2%}'.format(data['actual_previous'])}"
                     elif data['actual_forecast'] is not None and data['actual_previous'] is None:
-                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AF:{'{:,.2f}%'.format(data['actual_forecast'])}"
+                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AF:{'{:,.2%}'.format(data['actual_forecast'])}"
                     elif data['actual_forecast'] is None and data['actual_previous'] is not None:
-                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AP:{'{:,.2f}%'.format(data['actual_previous'])}"
+                        head_line = f"EVT:{data['event_name']}|TM:{data['event_time'].strftime('%H:%M')}|UPD:{update_time.time().strftime('%H:%M')}|AP:{'{:,.2%}'.format(data['actual_previous'])}"
                     cursor_obj.execute("insert into news_headlines (entry_date, distributor_code, story_id, timestamp, "
                                        "headline, "
                                        "symbol_1, symbol_2, symbol_3, symbol_4, symbol_5, symbol_6, symbol_7,"
