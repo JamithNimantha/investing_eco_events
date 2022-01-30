@@ -32,6 +32,7 @@ EVENT_IDX = 3
 ACTUAL_IDX = 4
 FORECAST_IDX = 5
 PREVIOUS_IDX = 6
+c = None
 
 
 def get_number_of_bull(td_data):
@@ -187,6 +188,7 @@ def save_record(cursor_obj, data_obj, current_time):
                         'update eco_events set update_news = %s where event_name = %s',
                         (True, data['event_name']))
 
+
 def closeBtn(c):
     try:
         c.find_element_by_id('closeBtn').click()
@@ -241,30 +243,11 @@ def database():
 
 def start():
     try:
-        username = 'v_koul@hotmail.com'
-        password = 'dekH56cHand'
-        # start the browser
-
-        options = Options()
-        options.headless = True
-
-        if platform.system().startswith('Darwin'):
-            # MAC OS
-            s = Service(ChromeDriverManager().install())
-            c = webdriver.Chrome(service=s, options=options)
-        else:
-            # Windows
-            c = webdriver.Chrome('chromedriver.exe', options=options)
-
+        # wait for
+        # c.get_element_by_id('userAccount')
         # visit the page
         c.get(MAIN_URL)
         time.sleep(20)
-
-        # login to the site
-        login(c, username, password)
-        # wait for
-        # c.get_element_by_id('userAccount')
-        time.sleep(10)
 
         # click on the 'today'
         e = c.find_element(By.ID, 'timeFrame_today')
@@ -288,13 +271,38 @@ def start():
 
         cursor.close()
         print('DONE!')
-    finally:
-        c.quit()
+    except Exception as ex:
+        print("Error Occurred!")
+        print(ex)
+        # c.quit()
 
 
 # Read Control.csv
 csv_data = dict(csv.reader(open(f'Control{os.sep}controls.csv')))
 wait_time = int(csv_data["investing_download_today.py sleep time in seconds"])
+
+username = 'v_koul@hotmail.com'
+password = 'dekH56cHand'
+# start the browser
+
+options = Options()
+options.headless = True
+
+if platform.system().startswith('Darwin'):
+    # MAC OS
+    s = Service(ChromeDriverManager().install())
+    c = webdriver.Chrome(service=s, options=options)
+else:
+    # Windows
+    c = webdriver.Chrome('chromedriver.exe', options=options)
+
+# visit the page
+c.get(MAIN_URL)
+time.sleep(20)
+
+# login to the site
+login(c, username, password)
+time.sleep(10)
 # Enter the exact time
 schedule.every(wait_time).seconds.do(start)
 
