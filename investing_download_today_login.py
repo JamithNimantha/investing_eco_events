@@ -3,6 +3,7 @@ import datetime
 import fnmatch
 import os
 import platform
+import sys
 import time
 
 import bs4
@@ -246,6 +247,11 @@ def start():
         # wait for
         # c.get_element_by_id('userAccount')
         # visit the page
+        end_time = csv_data["End Time for investing_download_today.py"]
+        if int(datetime.datetime.now().strftime("%H")) == int(datetime.datetime.strptime(end_time, '%I:%S %p').strftime("%H")):
+            c.quit()
+            sys.exit()
+
         c.get(MAIN_URL)
         time.sleep(20)
 
@@ -274,7 +280,7 @@ def start():
     except Exception as ex:
         print("Error Occurred!")
         print(ex)
-        # c.quit()
+        c.quit()
 
 
 # Read Control.csv
@@ -288,13 +294,14 @@ password = 'dekH56cHand'
 options = Options()
 options.headless = True
 
-if platform.system().startswith('Darwin'):
-    # MAC OS
-    s = Service(ChromeDriverManager().install())
-    c = webdriver.Chrome(service=s, options=options)
-else:
-    # Windows
-    c = webdriver.Chrome('chromedriver.exe', options=options)
+# if platform.system().startswith('Darwin'):
+#     # MAC OS
+#     s = Service(ChromeDriverManager().install())
+#     c = webdriver.Chrome(service=s, options=options)
+# else:
+#     # Windows
+
+c = webdriver.Chrome('chromedriver.exe', options=options)
 
 # visit the page
 c.get(MAIN_URL)

@@ -1,5 +1,6 @@
 Variable Name,Value
 investing_download_today.py sleep time in seconds,30
+End Time for investing_download_today.py,3:00 PM
 PostgreSQL Server,localhost
 PostgreSQL Database,iqfeed
 PostgreSQL Port,5432
