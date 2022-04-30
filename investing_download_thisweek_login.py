@@ -57,6 +57,8 @@ def convert_value(value):
         return float(value.replace('M', '').strip()) * 1000000
     elif value.endswith('B'):
         return float(value.replace('B', '').strip()) * 1000000000
+    elif value.endswith('T'):
+        return float(value.replace('T', '').strip()) * 1000000000000
     elif value.endswith('%'):
         return float(value.replace('%', '').strip()) / 100
     else:
@@ -64,8 +66,11 @@ def convert_value(value):
 
 
 def get_actual_forecast_previous_logic(actual, fore_prev):
-    if actual is not None and fore_prev is not None:
-        return (actual - (fore_prev)) / abs(fore_prev)
+    try:
+        if actual is not None and fore_prev is not None:
+            return (actual - fore_prev) / abs(fore_prev)
+    except ZeroDivisionError:
+        return None
     return None
 
 
@@ -186,6 +191,44 @@ def start():
 
         # wait for it to process, here's a static wait time
         time.sleep(10)
+
+        if True:
+            # click on the 'Calendar'
+            e = c.find_element(By.ID, 'datePickerToggleBtn')
+            actions = ActionChains(c)
+            actions.move_to_element(e).perform()
+            e.click()
+
+            e = c.find_element(By.ID, 'startDate')
+            start_date = e.get_attribute('value')
+            year = int(start_date.split('/')[2])
+            e.clear()
+            e.send_keys(start_date.replace(str(year), str(year - 2)))
+
+            # click on the 'Apply Button'
+            e = c.find_element(By.ID, 'applyBtn')
+            actions = ActionChains(c)
+            actions.move_to_element(e).perform()
+            e.click()
+            # wait for it to process, here's a static wait time
+            time.sleep(10)
+
+            # Get scroll height.
+            last_height = c.execute_script("return document.body.scrollHeight")
+            print(f'Initial Height: {last_height}')
+            while True:
+                # Scroll down to the bottom.
+                c.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+                # Wait to load the page.
+                time.sleep(20)
+                # Calculate new scroll height and compare with last scroll height.
+                new_height = c.execute_script("return document.body.scrollHeight")
+                print(f'New Height: {new_height}')
+
+                if new_height == last_height:
+                    break
+
+                last_height = new_height
 
         # process the data
         soup = bs4.BeautifulSoup(c.page_source, 'html.parser')
